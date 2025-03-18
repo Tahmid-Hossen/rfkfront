@@ -1,91 +1,79 @@
 <template>
   <v-sheet class="mx-auto" width="300">
-    <v-form fast-fail @submit.prevent="login">
-      <v-text-field
-          v-model="email"
-          :rules="emailRules"
-          label="Email"
-          type="email"
-          required
-      ></v-text-field>
-
-      <v-text-field
-          v-model="password"
-          :rules="passwordRules"
-          label="Password"
-          type="password"
-          required
-      ></v-text-field>
+    <v-form ref="form" fast-fail @submit.prevent="login">
+      <v-text-field v-model="email" :rules="emailRules" label="Email" type="email" required></v-text-field>
+      <v-text-field v-model="password" :rules="passwordRules" label="Password" type="password" required></v-text-field>
 
       <v-btn class="mt-2" type="submit" block :loading="loading">Login</v-btn>
 
-      <!-- Error Message -->
-      <v-alert v-if="error" type="error" class="mt-4">
-        {{ error }}
-      </v-alert>
+      <!-- Messages -->
+      <v-alert v-if="warning" type="warning" class="mt-4">{{ warning }}</v-alert>
+      <v-alert v-if="error" type="error" class="mt-4">{{ error }}</v-alert>
+
+      <!-- Success Snackbar -->
+      <v-snackbar v-model="snackbar" :timeout="2000" color="success">
+        Login successful! Redirecting to the dashboard...
+      </v-snackbar>
     </v-form>
   </v-sheet>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import axios from 'axios';
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import api from "@/services/api"; // Import the Axios instance
 
-const email = ref('');
-const password = ref('');
+const email = ref("");
+const password = ref("");
+const form = ref(null);
 const router = useRouter();
-const loading = ref(false); // Loading state
-const error = ref(''); // Error message
+const loading = ref(false);
+const error = ref("");
+const warning = ref("");
+const snackbar = ref(false);
 
 const emailRules = [
-  (v) => !!v || 'Email is required',
-  (v) => /.+@.+\..+/.test(v) || 'Email must be valid',
+  (v) => !!v || "Email is required",
+  (v) => /.+@.+\..+/.test(v) || "Email must be valid",
 ];
 
 const passwordRules = [
-  (v) => !!v || 'Password is required',
-  (v) => v.length >= 6 || 'Password must be at least 6 characters',
+  (v) => !!v || "Password is required",
+  (v) => v.length >= 6 || "Password must be at least 6 characters",
 ];
 
 async function login() {
-  // Reset error message
-  error.value = '';
+  error.value = "";
+  warning.value = "";
 
-  // Validate form
-  if (!email.value || !password.value) {
-    error.value = 'Please fill in all fields.';
-    return;
-  }
+  const { valid } = await form.value.validate();
+  if (!valid) return;
 
-  // Set loading state
   loading.value = true;
 
   try {
-    // Make API call
-    const response = await axios.post('http://127.0.0.1:8000/api/auth/login', {
+    const response = await api.post("/auth/login", {
       email: email.value,
       password: password.value,
     });
 
-    // Handle successful login
-    if (response.data.success) {
-      // Redirect to the dashboard
-      router.push('/dashboard');
+    const token = response.data?.data?.token;
+    if (token) {
+      localStorage.setItem("token", token);
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      snackbar.value = true;
+
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 2000);
     } else {
-      // Show error message from the API
-      error.value = response.data.message || 'Login failed. Please try again.';
+      warning.value = response.data.message || "Login failed. No token received.";
     }
   } catch (err) {
-    // Handle API errors
-    error.value = err.response?.data?.message || 'An error occurred. Please try again.';
+    console.error("API Error:", err);
+    error.value = err.response?.data?.message || "An error occurred. Please try again.";
   } finally {
-    // Reset loading state
     loading.value = false;
   }
 }
 </script>
-
-<style scoped>
-/* Add your styles here */
-</style>
