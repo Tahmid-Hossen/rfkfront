@@ -6,11 +6,9 @@
 
       <v-btn class="mt-2" type="submit" block :loading="loading">Login</v-btn>
 
-      <!-- Messages -->
       <v-alert v-if="warning" type="warning" class="mt-4">{{ warning }}</v-alert>
       <v-alert v-if="error" type="error" class="mt-4">{{ error }}</v-alert>
 
-      <!-- Success Snackbar -->
       <v-snackbar v-model="snackbar" :timeout="2000" color="success">
         Login successful! Redirecting to the dashboard...
       </v-snackbar>
@@ -21,7 +19,8 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import api from "@/services/api"; // Import the Axios instance
+import api from "@/services/api";
+import { setAuthToken } from "@/services/auth"; // Import helper function
 
 const email = ref("");
 const password = ref("");
@@ -59,8 +58,7 @@ async function login() {
 
     const token = response.data?.data?.token;
     if (token) {
-      localStorage.setItem("token", token);
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      setAuthToken(token);
       snackbar.value = true;
 
       setTimeout(() => {
