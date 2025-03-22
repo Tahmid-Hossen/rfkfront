@@ -1,3 +1,4 @@
+<!-- layouts/DefaultLayout.vue -->
 <template>
   <v-app :theme="theme">
     <!-- Topbar -->
@@ -17,7 +18,7 @@
               flat
               hide-details
               class="search-bar"
-              :class="{ 'expanded': showSearch }"
+              :class="{ expanded: showSearch }"
               bg-color="transparent"
               @click.stop
           ></v-text-field>
@@ -41,9 +42,7 @@
         </template>
         <v-list>
           <v-list-item @click="logout">
-            <v-list-item-icon>
-              <v-icon>mdi-logout</v-icon>
-            </v-list-item-icon>
+            <v-icon class="mr-2">mdi-logout</v-icon>
             <v-list-item-title>Logout</v-list-item-title>
           </v-list-item>
         </v-list>
@@ -53,10 +52,13 @@
     <!-- Navigation Drawer -->
     <v-navigation-drawer v-model="drawer" permanent :style="{ top: '64px', height: 'calc(100vh - 64px)' }">
       <v-list>
-        <v-list-item v-for="(item, index) in drawerItems" :key="index" :value="item.route">
-          <template v-slot:prepend>
-            <v-icon :icon="item.icon"></v-icon>
-          </template>
+        <v-list-item
+            v-for="(item, index) in drawerItems"
+            :key="index"
+            :to="item.route"
+            :prepend-icon="item.icon"
+            link
+        >
           <v-list-item-title>{{ item.title }}</v-list-item-title>
         </v-list-item>
       </v-list>
@@ -65,7 +67,7 @@
     <!-- Main Content -->
     <v-main :style="{ marginLeft: drawer ? '256px' : '0', transition: 'margin 0.3s ease' }">
       <v-container>
-        <p>Welcome to the Admin Dashboard!</p>
+        <slot></slot> <!-- This will display the page content dynamically -->
       </v-container>
     </v-main>
   </v-app>
@@ -75,55 +77,44 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '@/services/api';
-import { setAuthToken } from '@/services/auth'; // Import token helper
+import { setAuthToken } from '@/services/auth';
 
 const router = useRouter();
 
-// Drawer state
 const drawer = ref(true);
-
-// Search bar state
 const showSearch = ref(false);
 const searchQuery = ref('');
-
-// Profile menu state
 const profileMenu = ref(false);
-
-// Theme state
 const theme = ref('light');
 
-// Drawer items
 const drawerItems = ref([
   { title: 'Dashboard', icon: 'mdi-view-dashboard', route: '/dashboard' },
   { title: 'Users', icon: 'mdi-account-group', route: '/users' },
+  { title: 'Roles', icon: 'mdi-account-group', route: '/roles' },
+  { title: 'Permissions', icon: 'mdi-account-group', route: '/permissions' },
   { title: 'Settings', icon: 'mdi-cog', route: '/settings' },
 ]);
 
-// Toggle search bar
 function toggleSearch() {
   showSearch.value = !showSearch.value;
 }
 
-// Toggle theme between dark and light
 function toggleTheme() {
   theme.value = theme.value === 'light' ? 'dark' : 'light';
 }
 
-// Logout function
 async function logout() {
   try {
-    await api.post('/auth/logout'); // Call logout API
+    await api.post('/auth/logout');
+    setAuthToken(null);
+    await router.push('/login');
   } catch (error) {
     console.error('Logout Error:', error);
-  } finally {
-    setAuthToken(null); // Clear token from storage
-    router.push('/login'); // Redirect to login page
   }
 }
 </script>
 
 <style scoped>
-/* Search container */
 .search-container {
   display: flex;
   align-items: center;
@@ -140,7 +131,6 @@ async function logout() {
   width: 200px;
 }
 
-/* Search icon styling */
 .search-icon {
   position: relative;
   z-index: 2;
