@@ -65,7 +65,7 @@
     </v-navigation-drawer>
 
     <!-- Main Content -->
-    <v-main :style="{ marginLeft: drawer ? '256px' : '0', transition: 'margin 0.3s ease' }">
+    <v-main :style="{ marginLeft: drawer ? '20px' : '0', transition: 'margin 0.3s ease' }">
       <v-container>
         <slot></slot> <!-- This will display the page content dynamically -->
       </v-container>
