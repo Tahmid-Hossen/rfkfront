@@ -1,10 +1,6 @@
 <template>
   <v-sheet border rounded>
-    <v-data-table
-        :headers="headers"
-        :hide-default-footer="users.length < 11"
-        :items="users"
-    >
+    <v-data-table :headers="headers" :items="users" :hide-default-footer="users.length < 11">
       <template #top>
         <v-toolbar flat>
           <v-toolbar-title>
@@ -39,66 +35,58 @@
     </v-data-table>
   </v-sheet>
 
-  <!-- Add/Edit User Dialog -->
-  <v-dialog v-model="dialog" max-width="600">
-    <v-card :subtitle="isEditing ? 'Update User' : 'Create User'" :title="isEditing ? 'Edit User' : 'Add User'">
-      <template #text>
-        <v-row dense>
-          <!-- User Name -->
-          <v-col cols="12" md="12">
-            <v-text-field v-model="record.name" label="User*" required></v-text-field>
-          </v-col>
+  <!-- Reusable Modal Component -->
+  <ReusableModal v-model:modelValue="dialog" :title="isEditing ? 'Edit User' : 'Create User'" @save="saveUser">
+    <v-row dense>
+      <v-col cols="12" md="12">
+        <v-text-field v-model="record.name" label="User*" required></v-text-field>
+      </v-col>
 
-          <!-- Email -->
-          <v-col cols="12" md="12">
-            <v-text-field v-model="record.email" label="Email*" required></v-text-field>
-          </v-col>
+      <v-col cols="12" md="12">
+        <v-text-field v-model="record.email" label="Email*" required></v-text-field>
+      </v-col>
 
-          <!-- Role -->
-          <v-col cols="12" md="12">
-            <v-select v-model="record.role" :items="roles" label="Role*" required></v-select>
-          </v-col>
+      <v-col cols="12" md="12">
+        <v-select v-model="record.role" :items="roles" label="Role*" required></v-select>
+      </v-col>
 
-          <!-- Permissions (Checkboxes) -->
-          <v-col cols="12">
-            <label class="text-subtitle-1">Permissions*</label>
-            <v-checkbox
-                v-for="(perm, index) in permissions"
-                :key="index"
-                v-model="record.permissions"
-                :label="perm"
-                :value="perm"
-                density="compact"
-                hide-details
-            ></v-checkbox>
-          </v-col>
-        </v-row>
+      <v-col cols="12">
+        <label class="text-subtitle-1">Permissions*</label>
+        <v-checkbox
+            v-for="(perm, index) in permissions"
+            :key="index"
+            v-model="record.permissions"
+            :label="perm"
+            :value="perm"
+            density="compact"
+            hide-details
+        ></v-checkbox>
+      </v-col>
+    </v-row>
 
-        <small class="text-caption text-medium-emphasis">*Indicates required field</small>
-      </template>
-      <v-divider></v-divider>
-
-      <v-card-actions class="bg-surface-light">
-        <v-btn text="Cancel" variant="plain" @click="dialog = false"></v-btn>
-        <v-spacer></v-spacer>
-        <v-btn text="Save" @click="saveUser"></v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+    <small class="text-caption text-medium-emphasis">*Indicates required field</small>
+  </ReusableModal>
 </template>
 
 <script setup>
-import { ref, shallowRef, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import api from "../services/api"; // Import your Axios API service
+import ReusableModal from "../components/ReusableModal.vue"; // Import Reusable Modal Component
 
+// Default user record structure
 const DEFAULT_RECORD = { name: "", email: "", role: "", permissions: [] };
+
+// State variables
 const users = ref([]);
-const record = ref(DEFAULT_RECORD);
-const dialog = shallowRef(false);
-const isEditing = shallowRef(false);
+const record = ref({ ...DEFAULT_RECORD });
+const dialog = ref(false);
+const isEditing = ref(false);
+
+// Static data
 const roles = ref(["Super Admin", "SCM", "Vendor", "Management"]);
 const permissions = ref(["View Users", "Create Users", "Edit Users", "Delete Users", "Assign Permissions"]);
 
+// Table headers
 const headers = [
   { title: "User", key: "name", align: "start" },
   { title: "Email", key: "email" },
@@ -107,17 +95,19 @@ const headers = [
   { title: "Actions", key: "actions", align: "end", sortable: false },
 ];
 
+// Fetch users when component is mounted
 onMounted(fetchUsers);
 
+// Fetch users from API
 async function fetchUsers() {
   try {
     const response = await api.get("/users");
     if (response.data.status && response.data.data) {
-      users.value = response.data.data.map((user) => ({
+      users.value = response.data.data.map(user => ({
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role[0], // Assuming you have only one role per user
+        role: user.role[0], // Assuming a user has one role
         permissions: user.permissions,
       }));
     } else {
@@ -128,22 +118,26 @@ async function fetchUsers() {
   }
 }
 
+// Open modal for creating a user
 function add() {
   isEditing.value = false;
   record.value = { ...DEFAULT_RECORD };
   dialog.value = true;
 }
 
+// Open modal for editing a user
 function edit(user) {
   isEditing.value = true;
   record.value = { ...user };
   dialog.value = true;
 }
 
+// Remove a user from the list
 function remove(id) {
-  users.value = users.value.filter((user) => user.id !== id);
+  users.value = users.value.filter(user => user.id !== id);
 }
 
+// Save or update a user
 async function saveUser() {
   if (!record.value.name || !record.value.email || !record.value.role) {
     alert("Please fill in all required fields.");
@@ -168,14 +162,9 @@ async function saveUser() {
     }
     fetchUsers();
     dialog.value = false;
-    resetForm();
   } catch (error) {
     console.error("Error saving user:", error);
     alert("An error occurred while saving the user.");
   }
-}
-
-function resetForm() {
-  record.value = { ...DEFAULT_RECORD };
 }
 </script>
